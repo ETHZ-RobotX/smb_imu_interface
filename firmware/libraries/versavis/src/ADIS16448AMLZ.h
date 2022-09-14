@@ -76,12 +76,31 @@
 #define PROD_ID 0x56    // Product identifier
 #define SERIAL_NUM 0x58 // Lot-specific serial number
 
+#define BITS_SMPL_PRD_NO_TAP_CFG                       (0<<8)
+#define BITS_SMPL_PRD_2_TAP_CFG	                       (1<<8)
+#define BITS_SMPL_PRD_4_TAP_CFG	                       (2<<8)
+#define BITS_SMPL_PRD_8_TAP_CFG                        (3<<8)
+#define BITS_SMPL_PRD_16_TAP_CFG                       (4<<8)
+
+#define BITS_GYRO_DYN_RANGE_1000_CFG                   (4<<8)
+#define BITS_GYRO_DYN_RANGE_500_CFG                    (2<<8)
+#define BITS_GYRO_DYN_RANGE_250_CFG                    (1<<8)
+
+#define BITS_FIR_NO_TAP_CFG                            (0<<0)
+#define BITS_FIR_2_TAP_CFG                             (1<<0)
+#define BITS_FIR_4_TAP_CFG                             (2<<0)
+#define BITS_FIR_8_TAP_CFG                             (3<<0)
+#define BITS_FIR_16_TAP_CFG                            (4<<0)
+#define BITS_FIR_32_TAP_CFG                            (5<<0)
+#define BITS_FIR_64_TAP_CFG                            (6<<0)
+#define BITS_FIR_128_TAP_CFG                           (7<<0)
+
+
 // ADIS16448AMLZ Class Definition
 class ADIS16448AMLZ : public Imu {
 public:
   // ADIS16448AMLZ Constructor (ChipSelect, DataReady output pin, HardwareReset)
-  ADIS16448AMLZ(ros::NodeHandle *nh, const String &topic, const int rate_hz,
-                Timer &timer, int CS, int DR, int RST);
+  ADIS16448AMLZ(ros::NodeHandle *nh, const String &topic, int CS, int DR, int RST);
 
   // Destructor
   ~ADIS16448AMLZ();
@@ -103,20 +122,8 @@ public:
   // Write register (two bytes). Returns 1 when complete.
   int regWrite(uint8_t regAddr, int16_t regData);
 
-  // Scale accelerometer data. Returns scaled data as float.
-  float accelScale(int16_t sensorData);
-
-  // Scale gyro data. Returns scaled data as float.
-  float gyroScale(int16_t sensorData);
-
-  // Scale temperature data. Returns scaled data as float.
-  float tempScale(int16_t sensorData);
-
-  // Scale barometer data. Returns scaled data as float.
-  float pressureScale(int16_t sensorData);
-
-  // Scale magnetometer data. Returns scaled data as float.
-  float magnetometerScale(int16_t sensorData);
+  // Modify register (two bytes). Returns 1 when complete.
+  int regMod(uint8_t regAddr, uint16_t clearbits, uint16_t setbits);
 
   // Calculate CRC-16 Checksum.
   int checksum(int16_t *sensorData);

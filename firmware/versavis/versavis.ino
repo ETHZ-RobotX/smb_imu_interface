@@ -4,22 +4,15 @@
 #include <math.h>
 #include <ros.h>
 #include <std_msgs/UInt8.h>
+#include <std_msgs/Bool.h>
 
 #include "Arduino.h"
 
-#ifdef USE_ADIS16445
-#include <ADIS16445.h>
-#elif defined(USE_ADIS16448AMLZ)
+#if defined(USE_ADIS16448AMLZ)
 #include <ADIS16448AMLZ.h>
 #elif defined(USE_ADIS16448BMLZ)
 #include <ADIS16448BMLZ.h>
-#elif defined(USE_ADIS16460)
-#include <ADIS16460.h>
-#elif defined(USE_VN100)
-#include <VN100.h>
 #endif
-#include <Camera.h>
-#include <Timer.h>
 #include <helper.h>
 
 static void resetCb(const std_msgs::Bool & /*msg*/) { NVIC_SystemReset(); }
@@ -28,24 +21,13 @@ static void resetCb(const std_msgs::Bool & /*msg*/) { NVIC_SystemReset(); }
 ros::NodeHandle nh;
 ros::Subscriber<std_msgs::Bool> reset_sub("/versavis/reset", &resetCb);
 
-/* ----- Timers ----- */
-// In the current setup: TC5 -> IMU
-// Be careful, there is NO bookkeeping whether the timer is already used or
-// not. Only use a timer once, otherwise there will be unexpected behavior.
-Timer timer_imu = Timer((TcCount16 *)TC5);
-
 /* ----- IMU ----- */
-#ifdef USE_ADIS16445
-ADIS16445 imu(&nh, IMU_TOPIC, IMU_RATE, timer_imu, 10, 2, 9);
-#elif defined(USE_ADIS16448AMLZ)
-ADIS16448AMLZ imu(&nh, IMU_TOPIC, IMU_RATE, timer_imu, 10, 2, 9);
+#if defined(USE_ADIS16448AMLZ)
+ADIS16448AMLZ imu(&nh, IMU_TOPIC, 10, 2, 9);
 #elif defined(USE_ADIS16448BMLZ)
-ADIS16448BMLZ imu(&nh, IMU_TOPIC, IMU_RATE, timer_imu, 10, 2, 9);
-#elif defined(USE_ADIS16460)
-ADIS16460 imu(&nh, IMU_TOPIC, IMU_RATE, timer_imu, 10, 2, 9);
-#elif defined(USE_VN100)
-VN100 imu(&nh, IMU_TOPIC, IMU_RATE, timer_imu);
+ADIS16448BMLZ imu(&nh, IMU_TOPIC, 10, 2, 9);
 #endif
+// static const Imu* cur_imu = &imu;
 
 void setup() {
   DEBUG_INIT(115200);
@@ -54,7 +36,7 @@ void setup() {
 
 /* ----- ROS ----- */
 #ifndef DEBUG
-  nh.getHardware()->setBaud(250000);
+  nh.getHardware()->setBaud(1000000);
   nh.initNode();
   nh.subscribe(reset_sub);
 #else
@@ -67,21 +49,16 @@ void setup() {
 
   imu.setup();
 
-  /* -----  Declare timers ----- */
-  // Enable TC4 (not used) and TC5 timers.
-  REG_GCLK_CLKCTRL = static_cast<uint16_t>(
-      GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN_GCLK0 | GCLK_CLKCTRL_ID_TC4_TC5);
-  while (GCLK->STATUS.bit.SYNCBUSY == 1) {
-    ; // wait for sync
-  }
-
-  // enable InterruptVector.
-  NVIC_EnableIRQ(TC5_IRQn);
+  /* -----  attach interrupt ----- */
+  // use data ready signal
+  pinMode(38, INPUT);
+  attachInterrupt(38, readIMUdata, RISING);
 
   imu.begin();
 }
 
 void loop() {
+  while(!imu.isNewMeasurementAvailable()) {}
   imu.publish();
 
 #ifndef DEBUG
@@ -89,6 +66,8 @@ void loop() {
 #endif
 }
 
-void TC5_Handler() { // Called by imu_timer for imu trigger.
-  imu.triggerMeasurement();
+void readIMUdata() { // Called by interrupt.
+  imu.setTimestampNow();
+  imu.newMeasurementIsAvailable();
+  DEBUG_PRINTLN("imu interrupt");  
 }

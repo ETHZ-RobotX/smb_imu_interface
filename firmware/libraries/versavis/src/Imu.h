@@ -14,7 +14,6 @@
 #define Imu_h
 
 #include "Arduino.h"
-#include "Sensor.h"
 #include <ros.h>
 #include <versavis/ImuMicro.h>
 
@@ -30,13 +29,17 @@ enum ImuReading {
   // Check burst read function of the specific IMU.
 };
 
-class Imu : public Sensor {
+class Imu {
 public:
-  Imu(ros::NodeHandle *nh, const String &topic, const int rate_hz,
-      Timer &timer);
+  enum ImuType
+  {
+    ADIS16448AMLZ,
+    ADIS16448BMLZ
+  };
+
+  Imu(ros::NodeHandle *nh, const String &topic, ImuType imu_type);
   virtual void setup() = 0;
   void begin();
-  void triggerMeasurement();
   void publish();
   void setupPublisher();
 
@@ -46,13 +49,36 @@ public:
   // Update data internally without recursion.
   virtual bool updateData() = 0;
 
+  // 
+  bool isNewMeasurementAvailable() const;
+
+  // set new_measurement_available true
+  void newMeasurementIsAvailable();
+
+  // set new_measurement_available false
+  void newMeasurementIsNotAvailable();
+
+  // 
+  void setTimestampNow();
+
+  //
+  ros::Time getTimestamp() const;
+
+  ImuType getType();
+
 protected:
+  ros::NodeHandle *nh_;
+  String topic_;
+  ros::Publisher publisher_;
   int16_t *sensor_data_;
   const unsigned int kMaxRecursiveUpdateDepth;
   const uint64_t kImuSyncTimeoutUs;
 
 private:
   versavis::ImuMicro imu_msg_;
+  volatile bool new_measurement_available_;
+  ros::Time timestamp_;
+  ImuType imu_type_;
 };
 
 #endif

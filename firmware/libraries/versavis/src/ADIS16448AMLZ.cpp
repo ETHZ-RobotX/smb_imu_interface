@@ -28,6 +28,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "ADIS16448AMLZ.h"
+#include "adis_configuration.h"
 #include "helper.h"
 #include "versavis_configuration.h"
 
@@ -38,10 +39,9 @@
 // DR - DR output pin for data ready
 // RST - Hardware reset pin
 ////////////////////////////////////////////////////////////////////////////
-ADIS16448AMLZ::ADIS16448AMLZ(ros::NodeHandle *nh, const String &topic,
-                             const int rate_hz, Timer &timer, int CS, int DR,
-                             int RST)
-    : Imu(nh, topic, rate_hz, timer), CS_(CS), RST_(RST) {
+ADIS16448AMLZ::ADIS16448AMLZ(ros::NodeHandle *nh, const String &topic, 
+                             int CS, int DR, int RST)
+    : Imu(nh, topic, Imu::ImuType::ADIS16448AMLZ), CS_(CS), RST_(RST) {
   if (DR >= 0) {
     pinMode(DR, INPUT); // Set DR pin to be an input
   }
@@ -73,24 +73,33 @@ void ADIS16448AMLZ::setup() {
   /* ---------------- Perform IMU configuration  --------------------------- */
 
   // See also configuration of ADIS16448BMLZ.
-  // Enable CRC doesn't work for USE_ADIS16448AMLZ. The last 16 bits filled with
-  // zeros. Disable data ready. Disable CRC (CRC is only valid for 16448BMLZ nor
-  // AMLZ..)
-  int16_t kMscCtrlRegister = 0x0000; // B0000 0000 0001 0000
+  // Enable CRC doesn't work for USE_ADIS16448AMLZ 
+  // -->  Disable CRC (CRC is only valid for 16448BMLZ)
+  // Activating data ready-> bit 2 = 1
+  int16_t kMscCtrlRegister = 0x0004; // B0000 0000 0000 0100
   regWrite(MSC_CTRL, kMscCtrlRegister);
   delay(20);
 
-  // See above same as ADIS16448BMLZ,
-  // 0x0100: ±250°/sec, note that the lower dynamic range settings limit the
-  // minimum filter tap sizes to maintain resolution.
-  int16_t kSensAvgRegister = 0x0400; // B0000 0100 0000 0000;
+
+  // set use of internal clock (0x0001) + Set the sample rate reduction
+  // The full sample rate is 819.2 SPS. 
+  // this can be reduced by powers of 2 (2^0 .. 2^4)
+  int16_t kSmplPrdRegister = 0x0001; // B0000 0000 0000 0001;
+  kSmplPrdRegister |= BITS_SMPL_PRD_4_TAP_CFG;
+  regWrite(SMPL_PRD, kSmplPrdRegister);
+  delay(20);
+
+  // Set the danmic range for the gyroscopes to 1000 degs/s+ 
+  // set number of taps of the (optional) digital low pass filtering to 0
+  // see ADIS specs p19 for more details
+  int16_t kSensAvgRegister = BITS_GYRO_DYN_RANGE_1000_CFG; // B0000 0100 0000 0000;
+  kSensAvgRegister |= BITS_FIR_NO_TAP_CFG; 
   regWrite(SENS_AVG, kSensAvgRegister);
   delay(20);
 
-  // See above same as ADIS16448BMLZ,
-  // internal clock,
-  int16_t kSmplPrdRegister = 0x0001; // B0000 0000 0000 0001;
-  regWrite(SMPL_PRD, kSmplPrdRegister);
+  // Turn on ADIS16448 adaptor board LED
+  // (by setting DIO2 on ADIS16448)
+  regMod(GPIO_CTRL, 0x0200, 0x0002);
   delay(20);
 
   Imu::setupPublisher();
@@ -284,102 +293,27 @@ int ADIS16448AMLZ::regWrite(uint8_t regAddr, int16_t regData) {
   return (1);
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////
-// Converts accelerometer data output from the regRead() function and returns
-// acceleration in g's
-/////////////////////////////////////////////////////////////////////////////////////////
-// sensorData - data output from regRead()
-// return - (float) signed/scaled accelerometer in g's
-/////////////////////////////////////////////////////////////////////////////////////////
-float ADIS16448AMLZ::accelScale(int16_t sensorData) {
-  int signedData = 0;
-  int isNeg = sensorData & 0x8000;
-  if (isNeg == 0x8000) // If the number is negative, scale and sign the output
-    signedData = sensorData - 0xFFFF;
-  else
-    signedData = sensorData; // Else return the raw number
-  float finalData =
-      signedData * 0.000833; // Multiply by accel sensitivity (0.833 mg/LSB)
-  return finalData;
-}
+////////////////////////////////////////////////////////////////////////////
+// Modify a the specified register over SPI.
+// Returns 1 when complete.
+////////////////////////////////////////////////////////////////////////////
+// regAddr - address of register to be written
+// clearBits - bits to be cleared
+// setBits - data to be written to the register
+////////////////////////////////////////////////////////////////////////////
+int ADIS16448AMLZ::regMod(uint8_t regAddr, uint16_t clearBits, uint16_t setBits) {
+  // Read current value of register
+  uint16_t val = regRead(regAddr);
 
-/////////////////////////////////////////////////////////////////////////////////////////////
-// Converts gyro data output from the regRead() function and returns gyro rate
-// in deg/sec
-/////////////////////////////////////////////////////////////////////////////////////////////
-// sensorData - data output from regRead()
-// return - (float) signed/scaled gyro in degrees/sec
-/////////////////////////////////////////////////////////////////////////////////////////
-float ADIS16448AMLZ::gyroScale(int16_t sensorData) {
-  int signedData = 0;
-  int isNeg = sensorData & 0x8000;
-  if (isNeg == 0x8000) // If the number is negative, scale and sign the output
-    signedData = sensorData - 0xFFFF;
-  else
-    signedData = sensorData;
-  float finalData =
-      signedData * 0.04; // Multiply by gyro sensitivity (0.04 dps/LSB)
-  return finalData;
-}
+  // Clear specified bits
+  val &= ~clearBits;
+  // set specified bits
+  val |= setBits;
 
-/////////////////////////////////////////////////////////////////////////////////////////////
-// Converts temperature data output from the regRead() function and returns
-// temperature
-// in degrees Celcius
-/////////////////////////////////////////////////////////////////////////////////////////////
-// sensorData - data output from regRead()
-// return - (float) signed/scaled temperature in degrees Celcius
-/////////////////////////////////////////////////////////////////////////////////////////
-float ADIS16448AMLZ::tempScale(int16_t sensorData) {
-  int signedData = 0;
-  int isNeg = sensorData & 0x8000;
-  if (isNeg == 0x8000) // If the number is negative, scale and sign the output
-    signedData = sensorData - 0xFFFF;
-  else
-    signedData = sensorData;
-  float finalData =
-      (signedData * 0.07386) +
-      31; // Multiply by temperature scale and add 31 to equal 0x0000
-  return finalData;
-}
+  // write to register
+  regWrite(GPIO_CTRL, val);
 
-/////////////////////////////////////////////////////////////////////////////////////////////
-// Converts barometer data output from regRead() function and returns pressure
-// in bar
-/////////////////////////////////////////////////////////////////////////////////////////////
-// sensorData - data output from regRead()
-// return - (float) signed/scaled pressure in mBar
-/////////////////////////////////////////////////////////////////////////////////////////
-float ADIS16448AMLZ::pressureScale(int16_t sensorData) {
-  int signedData = 0;
-  int isNeg = sensorData & 0x8000;
-  if (isNeg == 0x8000) // If the number is negative, scale and sign the output
-    signedData = sensorData - 0xFFFF;
-  else
-    signedData = sensorData;
-  float finalData =
-      (signedData * 0.02); // Multiply by barometer sensitivity (0.02 mBar/LSB)
-  return finalData;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-// Converts magnetometer output from regRead() function and returns magnetic
-// field
-// reading in Gauss
-/////////////////////////////////////////////////////////////////////////////////////////////
-// sensorData - data output from regRead()
-// return - (float) signed/scaled magnetometer data in mgauss
-/////////////////////////////////////////////////////////////////////////////////////////
-float ADIS16448AMLZ::magnetometerScale(int16_t sensorData) {
-  int signedData = 0;
-  int isNeg = sensorData & 0x8000;
-  if (isNeg == 0x8000) // If the number is negative, scale and sign the output
-    signedData = sensorData - 0xFFFF;
-  else
-    signedData = sensorData;
-  float finalData =
-      (signedData * 0.0001429); // Multiply by sensor resolution (142.9 uGa/LSB)
-  return finalData;
+  return (1);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -399,7 +333,7 @@ bool ADIS16448AMLZ::updateDataIterative() {
   uint64_t tic = micros();
   bool success = false;
   for (size_t depth = 0; depth < kMaxRecursiveUpdateDepth; ++depth) {
-    Sensor::setTimestampNow();
+    setTimestampNow();
     sensor_data_ = sensorReadWoCRC();
     // Assuming that 1) temperature changes much slower than IMU sampling rate,
     // 2) all other measurements are correct if TEMP_OUT is correct. It may be

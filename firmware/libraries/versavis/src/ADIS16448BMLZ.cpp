@@ -38,10 +38,9 @@
 // DR - DR output pin for data ready
 // RST - Hardware reset pin
 ////////////////////////////////////////////////////////////////////////////
-ADIS16448BMLZ::ADIS16448BMLZ(ros::NodeHandle *nh, const String &topic,
-                             const int rate_hz, Timer &timer, int CS, int DR,
-                             int RST)
-    : Imu(nh, topic, rate_hz, timer), CS_(CS), RST_(RST) {
+ADIS16448BMLZ::ADIS16448BMLZ(ros::NodeHandle *nh, const String &topic, 
+                             int CS, int DR, int RST)
+    : Imu(nh, topic, Imu::ImuType::ADIS16448BMLZ), CS_(CS), RST_(RST) {
   if (DR >= 0) {
     pinMode(DR, INPUT); // Set DR pin to be an input
   }
@@ -363,103 +362,7 @@ void ADIS16448BMLZ::updateCRC(unsigned int *crc, unsigned int *data,
   }
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////
-// Converts accelerometer data output from the regRead() function and returns
-// acceleration in g's
-/////////////////////////////////////////////////////////////////////////////////////////
-// sensorData - data output from regRead()
-// return - (float) signed/scaled accelerometer in g's
-/////////////////////////////////////////////////////////////////////////////////////////
-float ADIS16448BMLZ::accelScale(int16_t sensorData) {
-  int signedData = 0;
-  int isNeg = sensorData & 0x8000;
-  if (isNeg == 0x8000) // If the number is negative, scale and sign the output
-    signedData = sensorData - 0xFFFF;
-  else
-    signedData = sensorData; // Else return the raw number
-  float finalData =
-      signedData * 0.000833; // Multiply by accel sensitivity (0.833 mg/LSB)
-  return finalData;
-}
 
-/////////////////////////////////////////////////////////////////////////////////////////////
-// Converts gyro data output from the regRead() function and returns gyro rate
-// in deg/sec
-/////////////////////////////////////////////////////////////////////////////////////////////
-// sensorData - data output from regRead()
-// return - (float) signed/scaled gyro in degrees/sec
-/////////////////////////////////////////////////////////////////////////////////////////
-float ADIS16448BMLZ::gyroScale(int16_t sensorData) {
-  int signedData = 0;
-  int isNeg = sensorData & 0x8000;
-  if (isNeg == 0x8000) // If the number is negative, scale and sign the output
-    signedData = sensorData - 0xFFFF;
-  else
-    signedData = sensorData;
-  float finalData =
-      signedData * 0.04; // Multiply by gyro sensitivity (0.04 dps/LSB)
-  return finalData;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-// Converts temperature data output from the regRead() function and returns
-// temperature
-// in degrees Celcius
-/////////////////////////////////////////////////////////////////////////////////////////////
-// sensorData - data output from regRead()
-// return - (float) signed/scaled temperature in degrees Celcius
-/////////////////////////////////////////////////////////////////////////////////////////
-float ADIS16448BMLZ::tempScale(int16_t sensorData) {
-  int signedData = 0;
-  int isNeg = sensorData & 0x8000;
-  if (isNeg == 0x8000) // If the number is negative, scale and sign the output
-    signedData = sensorData - 0xFFFF;
-  else
-    signedData = sensorData;
-  float finalData =
-      (signedData * 0.07386) +
-      31; // Multiply by temperature scale and add 31 to equal 0x0000
-  return finalData;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-// Converts barometer data output from regRead() function and returns pressure
-// in bar
-/////////////////////////////////////////////////////////////////////////////////////////////
-// sensorData - data output from regRead()
-// return - (float) signed/scaled pressure in mBar
-/////////////////////////////////////////////////////////////////////////////////////////
-float ADIS16448BMLZ::pressureScale(int16_t sensorData) {
-  int signedData = 0;
-  int isNeg = sensorData & 0x8000;
-  if (isNeg == 0x8000) // If the number is negative, scale and sign the output
-    signedData = sensorData - 0xFFFF;
-  else
-    signedData = sensorData;
-  float finalData =
-      (signedData * 0.02); // Multiply by barometer sensitivity (0.02 mBar/LSB)
-  return finalData;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-// Converts magnetometer output from regRead() function and returns magnetic
-// field
-// reading in Gauss
-/////////////////////////////////////////////////////////////////////////////////////////////
-// sensorData - data output from regRead()
-// return - (float) signed/scaled magnetometer data in mgauss
-/////////////////////////////////////////////////////////////////////////////////////////
-float ADIS16448BMLZ::magnetometerScale(int16_t sensorData) {
-  int signedData = 0;
-  int isNeg = sensorData & 0x8000;
-  if (isNeg == 0x8000) // If the number is negative, scale and sign the output
-    signedData = sensorData - 0xFFFF;
-  else
-    signedData = sensorData;
-  float finalData =
-      (signedData * 0.0001429); // Multiply by sensor resolution (142.9 uGa/LSB)
-  return finalData;
-}
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 // Method to update the sensor data without any validity checks (may result in
@@ -474,11 +377,12 @@ bool ADIS16448BMLZ::updateData() {
 // Method to update the internally stored sensor data recusivelly by checking
 // the validity.
 ///////////////////////////////////////////////////////////////////////////////////////////////
-bool ADIS16448BMLZ::updateDataIterative() {
+bool ADIS16448BMLZ::updateDataIterative()
+{
   uint64_t tic = micros();
   bool success = false;
   for (size_t depth = 0; depth < kMaxRecursiveUpdateDepth; ++depth) {
-    Sensor::setTimestampNow();
+//    setTimestampNow();
     sensor_data_ = sensorReadAllCRC();
     if (sensor_data_ == nullptr || sensor_data_[12] != checksum(sensor_data_)) {
       if (micros() - tic > kImuSyncTimeoutUs) {
@@ -488,7 +392,8 @@ bool ADIS16448BMLZ::updateDataIterative() {
           topic_ +
           " (ADIS16448BMLZ.cpp): Failed IMU update detected, trying again " +
           (String)(kMaxRecursiveUpdateDepth - depth) + " times.");
-    } else {
+    }
+    else{
       return true;
     }
   }

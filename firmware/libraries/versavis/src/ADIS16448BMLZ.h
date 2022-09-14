@@ -80,8 +80,7 @@
 class ADIS16448BMLZ : public Imu {
 public:
   // ADIS16448BMLZ Constructor (ChipSelect, DataReady output pin, HardwareReset)
-  ADIS16448BMLZ(ros::NodeHandle *nh, const String &topic, const int rate_hz,
-                Timer &timer, int CS, int DR, int RST);
+  ADIS16448BMLZ(ros::NodeHandle *nh, const String &topic, int CS, int DR, int RST);
 
   // Destructor
   ~ADIS16448BMLZ();
@@ -128,6 +127,21 @@ public:
 
   // Update data withoput recursion.
   bool updateData();
+
+  enum SensorReading {
+    STAT = 0,
+    GX = 1,
+    GY = 2,
+    GZ = 3,
+    AX = 4,
+    AY = 5,
+    AZ = 6,
+    MAGX = 7,
+    MAGY = 8,
+    MAGZ = 9,
+    BARO = 10,
+    TEMP = 11
+  };
 
 private:
   // Variables to store hardware pin assignments.
