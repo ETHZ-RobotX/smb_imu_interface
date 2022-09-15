@@ -6,7 +6,7 @@
 Imu::Imu(ros::NodeHandle *nh, const String &topic, ImuType imu_type)
     : nh_(nh), topic_(topic), new_measurement_available_(false),
       imu_type_(imu_type), publisher_(topic_.c_str(), &imu_msg_),
-      kMaxRecursiveUpdateDepth(5u), kImuSyncTimeoutUs(4000) {}
+      kMaxRecursiveUpdateDepth(5u), kImuSyncTimeoutUs(1000) {}
 
 void Imu::publish()
 {

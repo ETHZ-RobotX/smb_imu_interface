@@ -9,9 +9,9 @@
 #include "Arduino.h"
 
 #if defined(USE_ADIS16448AMLZ)
-#include <ADIS16448AMLZ.h>
+#include <ADIS16448.h>
 #elif defined(USE_ADIS16448BMLZ)
-#include <ADIS16448BMLZ.h>
+#include <ADIS16448.h>
 #endif
 #include <helper.h>
 
@@ -23,9 +23,9 @@ ros::Subscriber<std_msgs::Bool> reset_sub("/versavis/reset", &resetCb);
 
 /* ----- IMU ----- */
 #if defined(USE_ADIS16448AMLZ)
-ADIS16448AMLZ imu(&nh, IMU_TOPIC, 10, 2, 9);
+ADIS16448 imu(&nh, IMU_TOPIC, ADIS16448::Adis16448Type::AMLZ, 10, 2, 0);
 #elif defined(USE_ADIS16448BMLZ)
-ADIS16448BMLZ imu(&nh, IMU_TOPIC, 10, 2, 9);
+ADIS16448 imu(&nh, IMU_TOPIC, ADIS16448::Adis16448Type::BMLZ, 10, 2, 0);
 #endif
 // static const Imu* cur_imu = &imu;
 

@@ -12,11 +12,13 @@
 #define TRIGGER_PULSE_US 10
 
 /* ----- IMU -----*/
-// Possible values: USE_ADIS16445, USE_ADIS16448AMLZ, USE_ADIS16448BMLZ,
-// USE_ADIS16460 and USE_VN100
+// Possible values: ADIS16448AMLZ, ADIS16448BMLZ
 #define USE_ADIS16448AMLZ
 #define IMU_TOPIC "/versavis/imu_micro"
-#define IMU_RATE 200
+
+// If defined, LED on adaptor board will turn be turned on
+// on succesful configuration using the ADIS GPIO 
+#define ASL_ADIS_ADAPTOR_BOARD
 
 /* ----- Additional triggers ----- */
 // Define whether additional test outputs should be used.
