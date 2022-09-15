@@ -311,7 +311,7 @@ int ADIS16448AMLZ::regMod(uint8_t regAddr, uint16_t clearBits, uint16_t setBits)
   val |= setBits;
 
   // write to register
-  regWrite(GPIO_CTRL, val);
+  regWrite(regAddr, val);
 
   return (1);
 }
