@@ -187,6 +187,9 @@ public:
   //
   Adis16448Type getType();
 
+  //
+  static Imu::ImuType getImuType(ADIS16448::Adis16448Type adis16448_type);
+
 private:
   // Variables to store hardware pin assignments.
   int CS_;

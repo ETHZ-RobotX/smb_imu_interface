@@ -26,6 +26,7 @@ void Imu::publish()
       if (sensor_data_ == nullptr)
       {
         error((topic_ + " (Imu.cpp): sensor_data == nullptr").c_str(), 10);
+        return;
       }
       imu_msg_.gx = sensor_data_[ImuReading::GX];
       imu_msg_.gy = sensor_data_[ImuReading::GY];

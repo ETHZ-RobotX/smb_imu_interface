@@ -41,7 +41,7 @@
 ////////////////////////////////////////////////////////////////////////////
 ADIS16448::ADIS16448(ros::NodeHandle *nh, const String &topic, 
                              Adis16448Type type, int CS, int DR, int RST)
-    : Imu(nh, topic, Imu::ImuType::ADIS16448BMLZ), CS_(CS), RST_(RST), type_(type) {
+    : Imu(nh, topic, getImuType(type)), CS_(CS), RST_(RST), type_(type) {
   if (DR >= 0) {
     pinMode(DR, INPUT); // Set DR pin to be an input
   }
@@ -49,6 +49,10 @@ ADIS16448::ADIS16448(ros::NodeHandle *nh, const String &topic,
   if (RST_ >= 0) {
     pinMode(RST_, OUTPUT);    // Set RST pin to be an output
     digitalWrite(RST_, HIGH); // Initialize RST pin to be high
+  }
+
+  for (uint8_t i = 0; i < sizeof(sensor_data_)/sizeof(sensor_data_[0]); ++i) {
+    sensor_data_[i] = 0;
   }
 }
 
@@ -60,8 +64,6 @@ void ADIS16448::setup() {
   // Reset IMU.
   regWrite(ADIS16448_GLOB_CMD, 0xBE80); // Perform an IMU reset.
   delay(300);
-  regWrite(ADIS16448_GLOB_CMD, 0xBE00); // Take IMU out of reset state.
-  delay(100);
   configSPI(); // Configure SPI
   delay(100);
 
@@ -188,7 +190,7 @@ int16_t ADIS16448::regRead(uint8_t regAddr) {
                       // requirement
   digitalWrite(CS_, HIGH); // Set CS high to disable device
 
-  delayMicroseconds(25); // Delay to not violate read rate (40us)
+  delayMicroseconds(9); // Delay to not violate read rate (40us)
 
   // Read data from requested register
   digitalWrite(CS_, LOW); // Set CS low to enable device
@@ -198,7 +200,7 @@ int16_t ADIS16448::regRead(uint8_t regAddr) {
       SPI.transfer(0x00);  // Send (0x00) and place lower byte into variable
   digitalWrite(CS_, HIGH); // Set CS high to disable device
 
-  delayMicroseconds(25); // Delay to not violate read rate (40us)
+  delayMicroseconds(9); // Delay to not violate read rate (40us)
 
   int16_t _dataOut =
       (_msbData << 8) | (_lsbData & 0xFF); // Concatenate upper and lower bytes
@@ -323,7 +325,7 @@ int ADIS16448::regWrite(uint8_t regAddr, int16_t regData) {
   SPI.transfer(lowBytehighWord);  // Write low byte from high word to SPI bus
   digitalWrite(CS_, HIGH);        // Set CS high to disable device
 
-  delayMicroseconds(40); // Delay to not violate read rate (40us)
+  delayMicroseconds(9); // Delay to not violate read rate (40us)
 
   // Write lowWord to SPI bus
   digitalWrite(CS_, LOW);        // Set CS low to enable device
@@ -400,6 +402,16 @@ void ADIS16448::updateCRC(unsigned int *crc, unsigned int *data,
   }
 }
 
+Imu::ImuType ADIS16448::getImuType(ADIS16448::Adis16448Type adis16448_type) {
+  switch(adis16448_type) {
+    case ADIS16448::Adis16448Type::AMLZ:
+      return Imu::ImuType::ADIS16448AMLZ;
+    case ADIS16448::Adis16448Type::BMLZ:
+      return Imu::ImuType::ADIS16448BMLZ;
+    default:
+      return Imu::ImuType::undefined;
+  }
+}
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -422,17 +434,39 @@ bool ADIS16448::updateDataIterative()
   bool success = false;
   for (size_t depth = 0; depth < kMaxRecursiveUpdateDepth; ++depth) {
 //    setTimestampNow();
-    if (!sensorReadAll(sensor_data_) || sensor_data_[12] != checksum(sensor_data_)) {
-      if (micros() - tic > kImuSyncTimeoutUs) {
-        return false;
-      }
-      DEBUG_PRINTLN(
-          topic_ +
-          " (ADIS16448.cpp): Failed IMU update detected, trying again " +
-          (String)(kMaxRecursiveUpdateDepth - depth) + " times.");
-    }
-    else{
-      return true;
+    switch (getType()) {
+      case ADIS16448::Adis16448Type::AMLZ:
+        sensorReadAll(sensor_data_);
+        // Assuming that 1) temperature changes much slower than IMU sampling rate,
+        // 2) all other measurements are correct if TEMP_OUT is correct. It may be
+        // necessary to filter outliers out by using moving average filter before
+        // publishing IMU topic (i.e., versavis_imu_receiver.cpp)
+        if (sensor_data_ == nullptr || sensor_data_[11] != regRead(ADIS16448_TEMP_OUT)) {
+          if (micros() - tic > kImuSyncTimeoutUs) {
+            return false;
+          }
+          DEBUG_PRINTLN(
+              topic_ +
+              " (ADIS16448.cpp): Failed IMU update detected, trying again " +
+              (String)(kMaxRecursiveUpdateDepth - depth) + " times.");
+        } else {
+          return true;
+        }
+        break;
+      case ADIS16448::Adis16448Type::BMLZ:
+        if (!sensorReadAll(sensor_data_) || sensor_data_[12] != checksum(sensor_data_)) {
+          if (micros() - tic > kImuSyncTimeoutUs) {
+            return false;
+          }
+          DEBUG_PRINTLN(
+              topic_ +
+              " (ADIS16448.cpp): Failed IMU update detected, trying again " +
+              (String)(kMaxRecursiveUpdateDepth - depth) + " times.");
+        }
+        else{
+          return true;
+        }
+        break;
     }
   }
   return false;

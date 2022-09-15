@@ -34,7 +34,8 @@ public:
   enum ImuType
   {
     ADIS16448AMLZ,
-    ADIS16448BMLZ
+    ADIS16448BMLZ,
+    undefined = 99
   };
 
   Imu(ros::NodeHandle *nh, const String &topic, ImuType imu_type);
@@ -70,7 +71,7 @@ protected:
   ros::NodeHandle *nh_;
   String topic_;
   ros::Publisher publisher_;
-  int16_t *sensor_data_;
+  int16_t sensor_data_[16];
   const unsigned int kMaxRecursiveUpdateDepth;
   const uint64_t kImuSyncTimeoutUs;
 

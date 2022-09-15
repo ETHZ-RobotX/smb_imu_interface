@@ -23,11 +23,10 @@ ros::Subscriber<std_msgs::Bool> reset_sub("/versavis/reset", &resetCb);
 
 /* ----- IMU ----- */
 #if defined(USE_ADIS16448AMLZ)
-ADIS16448 imu(&nh, IMU_TOPIC, ADIS16448::Adis16448Type::AMLZ, 10, 2, 0);
+ADIS16448 imu(&nh, IMU_TOPIC, ADIS16448::Adis16448Type::AMLZ, 10, 2, -1);
 #elif defined(USE_ADIS16448BMLZ)
-ADIS16448 imu(&nh, IMU_TOPIC, ADIS16448::Adis16448Type::BMLZ, 10, 2, 0);
+ADIS16448 imu(&nh, IMU_TOPIC, ADIS16448::Adis16448Type::BMLZ, 10, 2, -1);
 #endif
-// static const Imu* cur_imu = &imu;
 
 void setup() {
   DEBUG_INIT(115200);
@@ -35,14 +34,15 @@ void setup() {
   delay(1000);
 
 /* ----- ROS ----- */
+  while (!SerialUSB) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }
 #ifndef DEBUG
   nh.getHardware()->setBaud(1000000);
   nh.initNode();
   nh.subscribe(reset_sub);
 #else
-  while (!SerialUSB) {
-    ; // wait for serial port to connect. Needed for native USB port only
-  }
+
 #endif
 
   DEBUG_PRINTLN(F("Main: Start setup."));
