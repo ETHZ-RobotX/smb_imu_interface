@@ -19,7 +19,7 @@
 #include <ros/subscriber.h>
 #include <sensor_msgs/Imu.h>
 
-#include <versavis/ImuMicro.h>
+#include <versavis_adis16448_receiver/ImuMicro.h>
 
 class VersaVISImuReciever {
 public:
@@ -35,7 +35,7 @@ public:
 
   ~VersaVISImuReciever() { node_handle_.shutdown(); }
 
-  void imuCallback(const versavis::ImuMicro &imu_micro_msg) {
+  void imuCallback(const versavis_adis16448_receiver::ImuMicro &imu_micro_msg) {
     ROS_INFO_ONCE("Received first IMU message.");
     if (imu_micro_msg.time.data.toNSec() < last_msg_time_.toNSec()) {
       ROS_WARN(
