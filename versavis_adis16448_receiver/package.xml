@@ -5,7 +5,7 @@
   <description>The versavis ADIS16448 receiver package</description>
   <maintainer email="thomas.mantel@mavt.ethz.ch">Thomas Mantel</maintainer>
   <license>closed</license>
-  <url type="website">https://github.com/mantelt/versIMU</url>
+  <url type="website">https://github.com/mantelt/versaIMU</url>
 
   <buildtool_depend>catkin</buildtool_depend>
   <depend>message_generation</depend>

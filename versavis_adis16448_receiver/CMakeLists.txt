@@ -6,9 +6,7 @@ project(versavis_adis16448_receiver)
 set(CMAKE_CXX_FLAGS "-std=c++11 -Ofast")
 
 find_package(catkin REQUIRED COMPONENTS
-  image_transport
   message_generation
-  nodelet
   roscpp
   rospy
   rosserial_arduino
