@@ -19,7 +19,7 @@
 #include <ros/subscriber.h>
 #include <sensor_msgs/Imu.h>
 
-#include <versavis/ImuMicro.h>
+#include <versavis_adis16448_receiver/ImuMicro.h>
 
 class VersaVISImuReciever {
 public:
@@ -35,7 +35,7 @@ public:
 
   ~VersaVISImuReciever() { node_handle_.shutdown(); }
 
-  void imuCallback(const versavis::ImuMicro &imu_micro_msg) {
+  void imuCallback(const versavis_adis16448_receiver::ImuMicro &imu_micro_msg) {
     ROS_INFO_ONCE("Received first IMU message.");
     if (imu_micro_msg.time.data.toNSec() < last_msg_time_.toNSec()) {
       ROS_WARN(
@@ -99,8 +99,8 @@ public:
     node_handle_.param("imu_pub_topic", imu_pub_topic_,
                        std::string("/versavis/imu"));
     node_handle_.param("imu_accelerator_sensitivity",
-                       imu_accelerator_sensitivity_, 0.00025);
-    node_handle_.param("imu_gyro_sensitivity", imu_gyro_sensitivity_, 0.05);
+                       imu_accelerator_sensitivity_, 0.000833333);
+    node_handle_.param("imu_gyro_sensitivity", imu_gyro_sensitivity_, 0.04);
     node_handle_.param("imu_acceleration_covariance",
                        imu_acceleration_covariance_, 0.043864908);
     node_handle_.param("imu_gyro_covariance", imu_gyro_covariance_, 6e-9);

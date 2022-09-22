@@ -1,2 +1,5 @@
 # ros_lib
 firmware/libraries/ros_lib
+build
+
+firmware/.vscode/
