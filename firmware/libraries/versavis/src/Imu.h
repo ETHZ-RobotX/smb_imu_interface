@@ -15,7 +15,7 @@
 
 #include "Arduino.h"
 #include <ros.h>
-#include <versavis/ImuMicro.h>
+#include <versavis_adis16448_receiver/ImuMicro.h>
 
 enum ImuReading {
   STAT = 0,
@@ -76,7 +76,7 @@ protected:
   const uint64_t kImuSyncTimeoutUs;
 
 private:
-  versavis::ImuMicro imu_msg_;
+  versavis_adis16448_receiver::ImuMicro imu_msg_;
   volatile bool new_measurement_available_;
   ros::Time timestamp_;
   ImuType imu_type_;

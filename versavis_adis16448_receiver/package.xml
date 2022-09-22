@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>versavis_adis16448_receiver</name>
-  <version>0.0.1</version>
+  <version>0.1.0</version>
   <description>The versavis ADIS16448 receiver package</description>
   <maintainer email="thomas.mantel@mavt.ethz.ch">Thomas Mantel</maintainer>
   <license>closed</license>
-  <url type="website">https://github.com/mantelt/versaIMU</url>
+  <url type="website">https://github.com/ETHZ-RobotX/smb_imu_interface</url>
 
   <buildtool_depend>catkin</buildtool_depend>
   <depend>message_generation</depend>

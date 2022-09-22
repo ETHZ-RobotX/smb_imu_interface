@@ -1,7 +1,7 @@
-# VersaIMU -- (versatile) IMU interface
+# SMB IMU interface
 
-_VersaIMU_ is a stripped down version of [VersaVIS](https://github.com/ethz-asl/versavis) that allows receiving data from an IMU and publishing the sensor data in ROS. 
-Currently, only ADIS16448 (both AMLZ and BMLZ versions) is supported. Data is published using a slightly modified version of [rosserial](https://github.com/ethz-asl/rosserial/). 
+_SMB IMU interface_ is a stripped down version of [VersaVIS](https://github.com/ethz-asl/versavis) that allows receiving data from an IMU and publishing the sensor data in ROS. 
+Currently, only the ADIS16448 (both AMLZ and BMLZ versions) is supported. Data is published using a slightly modified version of [rosserial](https://github.com/ethz-asl/rosserial/). 
 
 
 ## Install
@@ -10,9 +10,9 @@ Currently, only ADIS16448 (both AMLZ and BMLZ versions) is supported. Data is pu
 
 ```
 cd ~/catkin_ws/src/
-git clone git@github.com:mantelt/versaIMU.git --recursive
+git clone git@github.com:ETHZ-RobotX/smb_imu_interface.git --recursive
 catkin build versavis_adis16448_receiver
-cd versaIMU/firmware
+cd smb_imu_interface/firmware
 ./setup.sh
 ```
 
@@ -35,7 +35,7 @@ sudo ldconfig
 Note: You might have to reboot your computer for this to take effect. You can check by see whether a `/dev/versavis` is available and pointing to the correct device.
 
 ### Configure
-Adapt the [configuration file](https://github.com/mantelt/versaIMU/blob/master/firmware/libraries/versavis/src/versavis_configuration.h) to your setup needs. 
+Adapt the [configuration file](https://github.com/ETHZ-RobotX/smb_imu_interface/blob/master/firmware/libraries/versavis/src/versavis_configuration.h) to your setup needs. 
 
 ### Flash firmware on the VersaVIS board
 * Install the arduino IDE from [here](https://www.arduino.cc/en/Main/OldSoftwareReleases#previous). Use version 1.8.2!
@@ -50,9 +50,9 @@ Adapt the [configuration file](https://github.com/mantelt/versaIMU/blob/master/f
 * Flash using the *Upload* menu option
 
 ## Usage
-* Adapt `versavis/launch/run_versavis_adis16448.launch` to your needs.
+* Adapt `versavis_adis16448_receiver/launch/run_versavis_adis16448.launch` to your needs.
 * Run with
 ```
-roslaunch versavis run_versavis_adis16448.launch
+roslaunch versavis_adis16448_receiver run_versavis_adis16448.launch
 ```
 * Wait for successfull initialization.

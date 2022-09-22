@@ -13,7 +13,7 @@
 
 /* ----- IMU -----*/
 // Possible values: ADIS16448AMLZ, ADIS16448BMLZ
-#define USE_ADIS16448AMLZ
+#define USE_ADIS16448BMLZ
 #define IMU_TOPIC "/versavis/imu_micro"
 
 // If defined, LED on adaptor board will turn be turned on
